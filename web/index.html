@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Realtime Chat</title>
+    <style>
+        body { font-family: Arial, sans-serif; }
+        #chat { border: 1px solid #ccc; height: 300px; overflow-y: auto; margin-bottom: 10px; padding: 5px; }
+        #name, #message { width: 200px; }
+    </style>
+</head>
+<body>
+    <h2>Realtime Chat</h2>
+    <div>
+        <input id="name" placeholder="Seu nome">
+        <button onclick="connect()">Entrar</button>
+    </div>
+    <div id="chat"></div>
+    <div>
+        <input id="message" placeholder="Digite sua mensagem" disabled>
+        <button onclick="sendMessage()" disabled id="sendBtn">Enviar</button>
+    </div>
+    <script>
+        let ws;
+        function connect() {
+            const name = document.getElementById('name').value.trim();
+            if (!name) return alert('Digite seu nome!');
+            ws = new WebSocket(`ws://${location.host}/ws?name=${encodeURIComponent(name)}`);
+            ws.onopen = () => {
+                document.getElementById('message').disabled = false;
+                document.getElementById('sendBtn').disabled = false;
+                document.getElementById('name').disabled = true;
+            };
+            ws.onmessage = (evt) => {
+                const msg = JSON.parse(evt.data);
+                const chat = document.getElementById('chat');
+                const time = new Date(msg.time).toLocaleTimeString();
+                let text = `[${time}] `;
+                if (msg.type === 'system') {
+                    text += `<em>${msg.text}</em>`;
+                } else {
+                    text += `<b>${msg.from || 'Anônimo'}:</b> ${msg.text}`;
+                }
+                chat.innerHTML += text + '<br>';
+                chat.scrollTop = chat.scrollHeight;
+            };
+            ws.onclose = () => {
+                document.getElementById('message').disabled = true;
+                document.getElementById('sendBtn').disabled = true;
+                document.getElementById('name').disabled = false;
+            };
+        }
+        function sendMessage() {
+            const input = document.getElementById('message');
+            const text = input.value.trim();
+            if (!text || !ws || ws.readyState !== 1) return;
+            ws.send(JSON.stringify({ type: 'chat', text }));
+            input.value = '';
+        }
+        document.getElementById('message').addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') sendMessage();
+        });
+    </script>
+</body>
+</html>
