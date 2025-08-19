@@ -18,8 +18,12 @@ import (
 )
 
 func main() {
-	addr := flag.String("addr", ":8080", "HTTP server address")
-	flag.Parse()
+	port := os.Getenv("PORT")
+	if port == "" {
+	    port = "8080" // fallback para rodar local
+	}
+	addr := ":" + port
+
 
 	if err := store.InitStore("mongodb+srv://Derick:Basquete@cluster0.dfboxft.mongodb.net/realtime-chat"); err != nil {
 		log.Fatalf("Erro ao conectar ao MongoDB: %v", err)
@@ -41,7 +45,7 @@ func main() {
     r.HandleFunc("/api/flush", api.FlushHandler).Methods("POST")
 
 	srv := &http.Server{
-		Addr:         *addr,
+		Addr:         addr,
 		Handler:      loggingMiddleware(r),
 		ReadTimeout:  15 * time.Second,
 		WriteTimeout: 15 * time.Second,
@@ -79,4 +83,5 @@ func loggingMiddleware(next http.Handler) http.Handler {
 		next.ServeHTTP(w, r)
 		fmt.Printf("%s %s %s\n", r.Method, r.URL.Path, time.Since(start))
 	})
+
 }
